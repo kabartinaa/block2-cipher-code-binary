@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Crypto Binary Analysis Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at top, #1f2937 0, #020617 60%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 1100px;
+      padding: 24px 16px 40px;
+      box-sizing: border-box;
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.95);
+      border-radius: 18px;
+      padding: 20px 24px;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      backdrop-filter: blur(18px);
+      margin-bottom: 18px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      color: #e5e7eb;
+    }
+
+    h1 {
+      font-size: 1.7rem;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    h1 span.logo-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 14px #38bdf8;
+    }
+
+    h2 {
+      font-size: 1.1rem;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 6px;
+      font-size: 0.9rem;
+      color: #9ca3af;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .badge-pill {
+      padding: 5px 11px;
+    }
+
+    .badge-primary {
+      border-color: rgba(56, 189, 248, 0.7);
+      color: #e0f2fe;
+      background: radial-gradient(circle at top, rgba(56, 189, 248, 0.22), rgba(15, 23, 42, 0.95));
+    }
+
+    .badge-success {
+      border-color: rgba(34, 197, 94, 0.7);
+      color: #bbf7d0;
+      background: radial-gradient(circle at top, rgba(34, 197, 94, 0.2), rgba(15, 23, 42, 0.98));
+    }
+
+    .badge-danger {
+      border-color: rgba(239, 68, 68, 0.7);
+      color: #fecaca;
+      background: radial-gradient(circle at top, rgba(239, 68, 68, 0.21), rgba(15, 23, 42, 0.98));
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #94a3b8;
+      margin-bottom: 2px;
+    }
+
+    .value-lg {
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+
+    .value-sm {
+      font-size: 0.9rem;
+      color: #e5e7eb;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      font-size: 0.8rem;
+      color: #e5e7eb;
+    }
+
+    .chip span.dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #38bdf8;
+    }
+
+    .chip-secondary .dot {
+      background: #a855f7;
+    }
+
+    .chip-tertiary .dot {
+      background: #f97316;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 6px 6px;
+    }
+
+    th {
+      font-weight: 600;
+      color: #a5b4fc;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.4);
+    }
+
+    tr:nth-child(odd) td {
+      background: rgba(15, 23, 42, 0.6);
+    }
+
+    tr:nth-child(even) td {
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      font-size: 0.75rem;
+    }
+
+    .pill span.dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      margin-right: 5px;
+      background: #22c55e;
+    }
+
+    .pill-danger span.dot {
+      background: #ef4444;
+    }
+
+    ol {
+      padding-left: 18px;
+      margin: 6px 0 0;
+      color: #e5e7eb;
+      font-size: 0.9rem;
+    }
+
+    .muted {
+      color: #9ca3af;
+      font-size: 0.85rem;
+    }
+
+    .file-name {
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 640px) {
+      h1 {
+        font-size: 1.3rem;
+      }
+      .card {
+        padding: 14px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- TOP SUMMARY CARD -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h1>
+            <span class="logo-dot"></span>
+            Crypto Binary Analysis
+          </h1>
+          <div class="meta-row">
+            <span>File: <span id="fileName" class="file-name">sample_binary.bin</span></span>
+            <span id="proprietaryBadge" class="badge badge-pill">Standard-like</span>
+          </div>
+        </div>
+        <div>
+          <span class="badge badge-primary badge-pill" id="algoBadge">Algorithm</span>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div>
+          <div class="label">Predicted Algorithm</div>
+          <div class="value-lg" id="algoName">AES-CBC</div>
+          <div class="muted" id="algoId">(id = 0)</div>
+        </div>
+
+        <div>
+          <div class="label">Architecture</div>
+          <div class="value-lg" id="archName">x86</div>
+        </div>
+
+        <div>
+          <div class="label">Protocol</div>
+          <div class="value-lg" id="protoName">TLS</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODEL VOTES -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Model Votes (Algorithm ID)</h2>
+        <span class="badge">Ensemble view</span>
+      </div>
+      <div class="grid">
+        <div>
+          <div class="chip">
+            <span class="dot"></span>
+            <span>GNN</span>
+            <span style="margin-left:auto;" id="gnnVote">0</span>
+          </div>
+        </div>
+        <div>
+          <div class="chip chip-secondary">
+            <span class="dot"></span>
+            <span>LSTM</span>
+            <span style="margin-left:auto;" id="lstmVote">0</span>
+          </div>
+        </div>
+        <div>
+          <div class="chip chip-tertiary">
+            <span class="dot"></span>
+            <span>XGBoost (Algo)</span>
+            <span style="margin-left:auto;" id="xgbVote">0</span>
+          </div>
+        </div>
+      </div>
+      <p class="muted" style="margin-top: 10px;">
+        Final algorithm is chosen by majority vote across the three models.
+      </p>
+    </div>
+
+    <!-- PROTOCOL SEQUENCE -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Protocol Handshake Flow</h2>
+        <span class="badge">From training dataset</span>
+      </div>
+      <div id="protoStepsWrapper">
+        <ol id="protoSteps"></ol>
+      </div>
+    </div>
+
+    <!-- FEATURE COMPARISON -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Feature Profile</h2>
+        <span class="badge">Current vs typical for this algorithm</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Current Binary</th>
+              <th>Typical (Training Mean)</th>
+            </tr>
+          </thead>
+          <tbody id="featureTableBody">
+            <!-- rows added via JS -->
+          </tbody>
+        </table>
+      </div>
+      <p class="muted" style="margin-top: 8px;">
+        Values are based on simple statistics over the raw bytes of the binary
+        (length, entropy, byte distribution, etc.).
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // ---------------------------------------------------------------------
+    // 1. SAMPLE DATA (replace this with real API response in your project)
+    // ---------------------------------------------------------------------
+    const mockResult = {
+      "file": "sample_binary.bin",
+      "algo_id": 9,
+      "algo_name": "BLOWFISH-CBC",
+      "arch_name": "x86",
+      "protocol_name": "DTLS",
+      "protocol_sequence": [
+        "DTLS_STEP1: ClientHello",
+        "DTLS_STEP2: ServerHello + Certificate",
+        "DTLS_STEP3: Finished"
+      ],
+      "gnn_pred_algo_id": 9,
+      "lstm_pred_algo_id": 3,
+      "xgb_algo_pred_algo_id": 9,
+      "xgb_arch_pred_id": 0,
+      "xgb_proto_pred_id": 1,
+      "ocsvm_is_proprietary": true,
+      "input_features": {
+        "length": 732,
+        "unique_bytes": 188,
+        "entropy": 7.12,
+        "mean_byte": 126.4,
+        "std_byte": 55.3
+      },
+      "algo_mean_features": [
+        710.5,       // length
+        182.3,       // unique_bytes
+        7.05,        // entropy
+        124.1,       // mean_byte
+        54.7         // std_byte
+      ]
+    };
+
+    // In real use, you’d do something like:
+    //
+     fetch("/api/predict?file=samples/sample_2962_x86.bin.bin")
+       .then(res => res.json())
+       .then(data => renderDashboard(data));
+
+
+    // ---------------------------------------------------------------------
+    // 2. RENDER FUNCTION
+    // ---------------------------------------------------------------------
+    function renderDashboard(res) {
+      // Top summary
+      document.getElementById("fileName").textContent = res.file || "unknown.bin";
+      document.getElementById("algoName").textContent = res.algo_name + "";
+      document.getElementById("algoId").textContent = `(id = ${res.algo_id})`;
+      document.getElementById("archName").textContent = res.arch_name + "";
+      document.getElementById("protoName").textContent = res.protocol_name + "";
+
+      // Proprietary badge
+      const propBadge = document.getElementById("proprietaryBadge");
+      if (res.ocsvm_is_proprietary) {
+        propBadge.textContent = "Proprietary / Outlier";
+        propBadge.classList.remove("badge-success");
+        propBadge.classList.add("badge-danger");
+      } else {
+        propBadge.textContent = "Standard-like";
+        propBadge.classList.remove("badge-danger");
+        propBadge.classList.add("badge-success");
+      }
+
+      // Algorithm badge text
+      const algoBadge = document.getElementById("algoBadge");
+      algoBadge.textContent = res.algo_name + "  •  Crypto Algorithm";
+
+      // Model votes
+      document.getElementById("gnnVote").textContent = res.gnn_pred_algo_id;
+      document.getElementById("lstmVote").textContent = res.lstm_pred_algo_id;
+      document.getElementById("xgbVote").textContent = res.xgb_algo_pred_algo_id;
+
+      // Protocol steps
+      const stepsContainer = document.getElementById("protoSteps");
+      stepsContainer.innerHTML = "";
+      const protoSeq = res.protocol_sequence || ["<no sequence in dataset>"];
+      protoSeq.forEach(step => {
+        const li = document.createElement("li");
+        li.textContent = step;
+        stepsContainer.appendChild(li);
+      });
+
+      // Feature table
+      const featureOrder = ["length", "unique_bytes", "entropy", "mean_byte", "std_byte"];
+      const algoMean = res.algo_mean_features || [];
+      const featureTableBody = document.getElementById("featureTableBody");
+      featureTableBody.innerHTML = "";
+
+      featureOrder.forEach((name, idx) => {
+        const tr = document.createElement("tr");
+
+        const tdName = document.createElement("td");
+        tdName.textContent = name;
+        tr.appendChild(tdName);
+
+        const tdCurrent = document.createElement("td");
+        const currentVal = res.input_features ? res.input_features[name] : null;
+        tdCurrent.textContent = currentVal !== undefined ? currentVal : "-";
+        tr.appendChild(tdCurrent);
+
+        const tdMean = document.createElement("td");
+        const meanVal = algoMean[idx];
+        tdMean.textContent = meanVal !== undefined ? meanVal : "-";
+        tr.appendChild(tdMean);
+
+        featureTableBody.appendChild(tr);
+      });
+    }
+
+    // Initial render with mock data
+    renderDashboard(mockResult);
+  </script>
+</body>
+</html>

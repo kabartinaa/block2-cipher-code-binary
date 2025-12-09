@@ -1,5 +1,5 @@
 import angr
-from capstone import *
+from arch_detect import *
 from collections import Counter
 import math
 
@@ -15,7 +15,7 @@ def entropy(data):
     return ent
 
 # Load raw binary blob explicitly
-raw = open("samples/sample_0061_x86.bin", "rb").read()
+raw = open("samples/sample_0000_x86.bin", "rb").read()
 proj = angr.Project(
     "samples/sample_0000_x86.bin",
     main_opts={
@@ -77,6 +77,11 @@ cg = proj.kb.callgraph
 print("Call graph nodes:", len(cg.nodes()))
 print("Call graph edges:", len(cg.edges()))
 
-#print("\n=== SECTIONS ===")
-for sec in proj.loader.main_object.sections:
-    print("Section:", sec.name, "Size:", sec.size, "Addr:", hex(sec.vaddr))
+print("\n=== SECTIONS ===")
+sections = list(proj.loader.main_object.sections)
+if sections:
+    for sec in sections:
+        print("Section:", sec.name, "Size:", sec.size, "Addr:", hex(sec.vaddr))
+else:
+    # Blob mode fallback
+    print("Section: .blob Size:", len(raw), "Addr:", hex(proj.loader.main_object.min_addr))

@@ -1,0 +1,32 @@
+{
+  "file": "P_2_S_2.bin",
+  "algo_id": 9,
+  "algo_name": "BLOWFISH-CBC",
+  "arch_name": "avr",
+  "protocol_name": "CustomProto",
+  "protocol_sequence": [
+    "CustomProto_STEP1",
+    "CustomProto_STEP2",
+    "CustomProto_STEP3"
+  ],
+  "gnn_pred_algo_id": 22,
+  "lstm_pred_algo_id": 7,
+  "xgb_algo_pred_algo_id": 9,
+  "xgb_arch_pred_id": 9,
+  "xgb_proto_pred_id": 9,
+  "ocsvm_is_proprietary": true,
+  "input_features": {
+    "length": 1587564,
+    "unique_bytes": 256,
+    "entropy": 6.068393137708847,
+    "mean_byte": 99.81381223056205,
+    "std_byte": 92.91815415561449
+  },
+  "algo_mean_features": [
+    1041.2,
+    126.8,
+    6.559929397932481,
+    98.78509101934296,
+    24.8822687734774
+  ]
+}
