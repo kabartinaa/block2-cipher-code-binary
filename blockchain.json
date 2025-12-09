@@ -1,0 +1,74 @@
+[
+    {
+        "index": 0,
+        "timestamp": "2025-12-09T10:18:48.141570Z",
+        "data": {
+            "message": "Genesis Block"
+        },
+        "previous_hash": "0",
+        "hash": "2f1a145113f2a5154ddcf02036757deacade19496f0f8f8182e8a843903cf36d"
+    },
+    {
+        "index": 1,
+        "timestamp": "2025-12-09T10:18:48.142694Z",
+        "data": {
+            "file": "P_2_S_8.bin",
+            "algo_id": 8,
+            "algo_name": "CHACHA20-POLY1305",
+            "arch_name": "riscv32",
+            "protocol_name": "MQTT",
+            "is_proprietary": true,
+            "features": {
+                "length": 432380,
+                "unique_bytes": 256,
+                "entropy": 6.640064089638946,
+                "mean_byte": 84.90529164161154,
+                "std_byte": 82.20259798921967
+            }
+        },
+        "previous_hash": "2f1a145113f2a5154ddcf02036757deacade19496f0f8f8182e8a843903cf36d",
+        "hash": "250ead9518ad8a626724d1374df06c44bd2ffc38d6096148228841045376e89d"
+    },
+    {
+        "index": 2,
+        "timestamp": "2025-12-09T10:28:08.888235Z",
+        "data": {
+            "file": "P_3_S_4.bin",
+            "algo_id": 8,
+            "algo_name": "CHACHA20-POLY1305",
+            "arch_name": "riscv64",
+            "protocol_name": "CoAP",
+            "is_proprietary": true,
+            "features": {
+                "length": 1264068,
+                "unique_bytes": 256,
+                "entropy": 7.121757772783251,
+                "mean_byte": 95.6519150868466,
+                "std_byte": 81.07881949952547
+            }
+        },
+        "previous_hash": "250ead9518ad8a626724d1374df06c44bd2ffc38d6096148228841045376e89d",
+        "hash": "ec5abe8a05e78245ae2011119ede598a7f13c0126f9e7380c956529f7a60c636"
+    },
+    {
+        "index": 3,
+        "timestamp": "2025-12-09T10:29:08.878143Z",
+        "data": {
+            "file": "P_3_S_4.bin",
+            "algo_id": 8,
+            "algo_name": "CHACHA20-POLY1305",
+            "arch_name": "riscv64",
+            "protocol_name": "CoAP",
+            "is_proprietary": true,
+            "features": {
+                "length": 1264068,
+                "unique_bytes": 256,
+                "entropy": 7.121757772783251,
+                "mean_byte": 95.6519150868466,
+                "std_byte": 81.07881949952547
+            }
+        },
+        "previous_hash": "ec5abe8a05e78245ae2011119ede598a7f13c0126f9e7380c956529f7a60c636",
+        "hash": "542461b2874fac942af3c5e07b3e729151749e2dac6deae7a94524d69d1c73dd"
+    }
+]
