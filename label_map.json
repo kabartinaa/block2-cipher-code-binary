@@ -1,0 +1,1 @@
+{"HMAC": 0, "DES-ECB": 1, "Blowfish-ECB": 2, "AES-CBC": 3, "CHACHA20": 4, "RC4-CBC": 5, "CAST-CBC": 6, "3DES-CBC": 7, "ECDSA": 8, "SHA256": 9, "RC4-ECB": 10, "Blowfish-CBC": 11, "ECDHE": 12, "IDEA-ECB": 13, "Twofish-CBC": 14, "AES-ECB": 15, "3DES-ECB": 16, "RSA": 17, "CAST-ECB": 18, "Twofish-ECB": 19, "SHA1": 20, "IDEA-CBC": 21, "DES-CBC": 22, "GCM": 23}

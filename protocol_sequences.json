@@ -1,0 +1,52 @@
+{
+    "TLS": [
+        "TLS_STEP1",
+        "TLS_STEP2",
+        "TLS_STEP3"
+    ],
+    "DTLS": [
+        "DTLS_STEP1",
+        "DTLS_STEP2",
+        "DTLS_STEP3"
+    ],
+    "SSH": [
+        "SSH_STEP1",
+        "SSH_STEP2",
+        "SSH_STEP3"
+    ],
+    "WiFi": [
+        "WiFi_STEP1",
+        "WiFi_STEP2",
+        "WiFi_STEP3"
+    ],
+    "Bluetooth": [
+        "Bluetooth_STEP1",
+        "Bluetooth_STEP2",
+        "Bluetooth_STEP3"
+    ],
+    "IPSec": [
+        "IPSec_STEP1",
+        "IPSec_STEP2",
+        "IPSec_STEP3"
+    ],
+    "HTTP": [
+        "HTTP_STEP1",
+        "HTTP_STEP2",
+        "HTTP_STEP3"
+    ],
+    "MQTT": [
+        "MQTT_STEP1",
+        "MQTT_STEP2",
+        "MQTT_STEP3"
+    ],
+    "CoAP": [
+        "CoAP_STEP1",
+        "CoAP_STEP2",
+        "CoAP_STEP3"
+    ],
+    "CustomProto": [
+        "CustomProto_STEP1",
+        "CustomProto_STEP2",
+        "CustomProto_STEP3"
+    ]
+}
