@@ -1,0 +1,242 @@
+templates/dashboard.html<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Crypto Binary Analyzer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background-color: #0f172a;
+      color: #e5e7eb;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 24px 12px 40px;
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+    }
+    h2 {
+      margin-top: 24px;
+      font-size: 1.2rem;
+    }
+    .card {
+      background: #111827;
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-top: 16px;
+      border: 1px solid #1f2937;
+    }
+    label {
+      font-size: 0.95rem;
+      display: block;
+      margin-bottom: 6px;
+    }
+    input[type="file"] {
+      color: #e5e7eb;
+    }
+    button {
+      margin-top: 10px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: none;
+      background: #38bdf8;
+      color: #0f172a;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 6px 8px;
+      text-align: left;
+    }
+    th {
+      border-bottom: 1px solid #374151;
+    }
+    tr:nth-child(odd) { background: #020617; }
+    tr:nth-child(even) { background: #030712; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      border: 1px solid #4b5563;
+      margin-left: 4px;
+    }
+    .badge-danger {
+      border-color: #ef4444;
+      color: #fecaca;
+    }
+    .badge-success {
+      border-color: #22c55e;
+      color: #bbf7d0;
+    }
+    .muted {
+      font-size: 0.85rem;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Crypto Binary Analyzer</h1>
+    <p class="muted">Upload a firmware/binary file to detect algorithm, architecture, protocol and proprietary status.</p>
+
+    <!-- Upload form -->
+    <div class="card">
+      <form method="POST" enctype="multipart/form-data">
+        <label for="binary">Choose binary file:</label>
+        <input type="file" id="binary" name="binary" required>
+        <br>
+        <button type="submit">Analyze</button>
+      </form>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="card" style="margin-top:12px; border-color:#b91c1c;">
+          {% for msg in messages %}
+            <div>{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% if result %}
+      <!-- Prediction summary -->
+      <div class="card">
+        <h2>Prediction</h2>
+        <p><strong>File:</strong> {{ result.file }}</p>
+        <p>
+          <strong>Algorithm:</strong> {{ result.algo_name }} (id={{ result.algo_id }})
+        </p>
+        <p><strong>Architecture:</strong> {{ result.arch_name }}</p>
+        <p><strong>Protocol:</strong> {{ result.protocol_name }}</p>
+        <p>
+          <strong>Proprietary?</strong>
+          {% if result.ocsvm_is_proprietary %}
+            <span class="badge badge-danger">YES (OC-SVM outlier)</span>
+          {% else %}
+            <span class="badge badge-success">NO (standard-like)</span>
+          {% endif %}
+        </p>
+
+        <h3>Model votes (algorithm id)</h3>
+        <ul>
+          <li>GNN: {{ result.gnn_pred_algo_id }}</li>
+          <li>LSTM: {{ result.lstm_pred_algo_id }}</li>
+          <li>XGBoost (algo): {{ result.xgb_algo_pred_algo_id }}</li>
+        </ul>
+      </div>
+
+      <!-- Features -->
+      <div class="card">
+        <h2>Feature profile</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Current binary</th>
+              <th>Typical (training mean)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% set feat_order = ["length","unique_bytes","entropy","mean_byte","std_byte"] %}
+            {% for name in feat_order %}
+              <tr>
+                <td>{{ name }}</td>
+                <td>{{ result.input_features[name] }}</td>
+                <td>
+                  {% if result.algo_mean_features %}
+                    {{ result.algo_mean_features[loop.index0] }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <p class="muted">Simple statistics over the raw bytes of the file.</p>
+      </div>
+
+      <!-- Optional: Ensemble + OC-SVM metrics -->
+      {% if metrics %}
+        <div class="card">
+          <h2>Model metrics (synthetic training dataset)</h2>
+          {% if metrics.overall_ensemble %}
+            <h3>Overall ensemble</h3>
+            <ul>
+              <li>Accuracy: {{ "%.4f"|format(metrics.overall_ensemble.accuracy) }}</li>
+              <li>Macro recall: {{ "%.4f"|format(metrics.overall_ensemble.macro_recall) }}</li>
+              <li>Macro precision: {{ "%.4f"|format(metrics.overall_ensemble.macro_precision) }}</li>
+              <li>False positive rate: {{ "%.4f"|format(metrics.overall_ensemble.false_positive_rate_overall) }}</li>
+            </ul>
+          {% endif %}
+
+          {% if metrics.ocsvm %}
+            <h3>OC-SVM (proprietary detector)</h3>
+            <ul>
+              <li>Accuracy: {{ "%.4f"|format(metrics.ocsvm.accuracy) }}</li>
+              <li>Precision (proprietary): {{ "%.4f"|format(metrics.ocsvm.precision) }}</li>
+              <li>Recall (proprietary): {{ "%.4f"|format(metrics.ocsvm.recall) }}</li>
+              <li>False positive rate: {{ "%.4f"|format(metrics.ocsvm.false_positive_rate) }}</li>
+              <li>False negative rate: {{ "%.4f"|format(metrics.ocsvm.false_negative_rate) }}</li>
+            </ul>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      <!-- Blockchain view -->
+      {% if blocks %}
+        <div class="card">
+          <h2>Blockchain log (last {{ blocks|length }} blocks)</h2>
+          {% if new_block %}
+            <p class="muted">New block added for this prediction: index {{ new_block.index }}, hash {{ new_block.hash[:16] }}…</p>
+          {% endif %}
+          <table>
+            <thead>
+              <tr>
+                <th>Idx</th>
+                <th>Time</th>
+                <th>File</th>
+                <th>Algorithm</th>
+                <th>Prop?</th>
+                <th>Hash (short)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for b in blocks %}
+                {% set d = b.data %}
+                <tr>
+                  <td>{{ b.index }}</td>
+                  <td>{{ b.timestamp }}</td>
+                  <td>{{ d.file if d is mapping else "" }}</td>
+                  <td>{{ d.algo_name if d is mapping else "" }}</td>
+                  <td>
+                    {% if d.is_proprietary %}
+                      YES
+                    {% else %}
+                      NO
+                    {% endif %}
+                  </td>
+                  <td>{{ b.hash[:16] }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    {% endif %}
+  </div>
+</body>
+</html>

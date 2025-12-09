@@ -70,5 +70,130 @@
         },
         "previous_hash": "ec5abe8a05e78245ae2011119ede598a7f13c0126f9e7380c956529f7a60c636",
         "hash": "542461b2874fac942af3c5e07b3e729151749e2dac6deae7a94524d69d1c73dd"
+    },
+    {
+        "index": 4,
+        "timestamp": "2025-12-09T10:50:59.679523Z",
+        "data": {
+            "file": "P_3_S_4.bin",
+            "algo_id": 8,
+            "algo_name": "CHACHA20-POLY1305",
+            "arch_name": "riscv64",
+            "protocol_name": "CoAP",
+            "is_proprietary": true,
+            "features": {
+                "length": 1264068,
+                "unique_bytes": 256,
+                "entropy": 7.121757772783251,
+                "mean_byte": 95.6519150868466,
+                "std_byte": 81.07881949952547
+            },
+            "overall_metrics": null
+        },
+        "previous_hash": "542461b2874fac942af3c5e07b3e729151749e2dac6deae7a94524d69d1c73dd",
+        "hash": "05507f8d882ddeab5f295eadcc3d874e807c6965edeecf1e489cdf51e8f4185d"
+    },
+    {
+        "index": 5,
+        "timestamp": "2025-12-09T10:57:09.444747Z",
+        "data": {
+            "file": "P_3_S_4.bin",
+            "algo_id": 8,
+            "algo_name": "CHACHA20-POLY1305",
+            "arch_name": "riscv64",
+            "protocol_name": "CoAP",
+            "is_proprietary": true,
+            "features": {
+                "length": 1264068,
+                "unique_bytes": 256,
+                "entropy": 7.121757772783251,
+                "mean_byte": 95.6519150868466,
+                "std_byte": 81.07881949952547
+            },
+            "overall_metrics": null
+        },
+        "previous_hash": "05507f8d882ddeab5f295eadcc3d874e807c6965edeecf1e489cdf51e8f4185d",
+        "hash": "fa794eebf9e425fc79f7f8f75701b3bfd2e09f024ce9f758e955f52003d18074"
+    },
+    {
+        "index": 6,
+        "timestamp": "2025-12-09T11:57:43.540439Z",
+        "data": {
+            "file": "P_3_S_4.bin",
+            "algo_id": 8,
+            "algo_name": "CHACHA20-POLY1305",
+            "arch_name": "riscv64",
+            "protocol_name": "CoAP",
+            "is_proprietary": true,
+            "features": {
+                "length": 1264068,
+                "unique_bytes": 256,
+                "entropy": 7.121757772783251,
+                "mean_byte": 95.6519150868466,
+                "std_byte": 81.07881949952547
+            },
+            "overall_metrics": {
+                "accuracy": 0.08666666666666667,
+                "macro_recall": 0.08129479216435738,
+                "macro_precision": 0.11378375560421228,
+                "false_positive_rate_overall": 0.9133333333333333
+            }
+        },
+        "previous_hash": "fa794eebf9e425fc79f7f8f75701b3bfd2e09f024ce9f758e955f52003d18074",
+        "hash": "21d735e967530c6be9523f0ffe23e464d28dee0f34ac9eef7bbcd44b6c01258e"
+    },
+    {
+        "index": 7,
+        "timestamp": "2025-12-09T12:11:32.605155Z",
+        "data": {
+            "file": "P_3_S_4.bin",
+            "algo_id": 8,
+            "algo_name": "CHACHA20-POLY1305",
+            "arch_name": "riscv64",
+            "protocol_name": "CoAP",
+            "is_proprietary": true,
+            "features": {
+                "length": 1264068,
+                "unique_bytes": 256,
+                "entropy": 7.121757772783251,
+                "mean_byte": 95.6519150868466,
+                "std_byte": 81.07881949952547
+            },
+            "overall_metrics": {
+                "accuracy": 0.08666666666666667,
+                "macro_recall": 0.08129479216435738,
+                "macro_precision": 0.11378375560421228,
+                "false_positive_rate_overall": 0.9133333333333333
+            }
+        },
+        "previous_hash": "21d735e967530c6be9523f0ffe23e464d28dee0f34ac9eef7bbcd44b6c01258e",
+        "hash": "6b3841a994c990fdb9aaba2161ff75e5557111877ce1892a9ff290090d2ae449"
+    },
+    {
+        "index": 8,
+        "timestamp": "2025-12-09T12:17:43.210696Z",
+        "data": {
+            "file": "standard_sample_AES_CBC.bin",
+            "algo_id": 0,
+            "algo_name": "AES-CBC",
+            "arch_name": "x86",
+            "protocol_name": "TLS",
+            "is_proprietary": false,
+            "features": {
+                "length": 666,
+                "unique_bytes": 60,
+                "entropy": 3.5293272067777375,
+                "mean_byte": 9.207207207207206,
+                "std_byte": 14.386837359103822
+            },
+            "overall_metrics": {
+                "accuracy": 0.08666666666666667,
+                "macro_recall": 0.08129479216435738,
+                "macro_precision": 0.11378375560421228,
+                "false_positive_rate_overall": 0.9133333333333333
+            }
+        },
+        "previous_hash": "6b3841a994c990fdb9aaba2161ff75e5557111877ce1892a9ff290090d2ae449",
+        "hash": "d0e58affda91bc0204907612907df2a924affeb72fa76143f06511137ee6f7a1"
     }
 ]

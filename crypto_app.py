@@ -5,6 +5,7 @@ import json
 import random
 import hashlib
 from datetime import datetime
+import tempfile
 
 import numpy as np
 import joblib
@@ -21,6 +22,8 @@ from sklearn.svm import OneClassSVM
 from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score, recall_score, precision_score
 
+# ------- NEW: Flask for single website -------
+from flask import Flask, request, render_template_string
 
 # =========================================================
 # 0. GLOBAL LABEL SPACES
@@ -487,7 +490,7 @@ def compute_and_save_metrics(dataset, device, gnn_model, lstm_model, xgb_algo, x
     xgb_proto_prec = float(precision_score(y_proto, y_proto_pred, average="macro", zero_division=0))
     xgb_proto_fpr_overall = float(1.0 - xgb_proto_acc)
 
-    # ---------- OVERALL ENSEMBLE (majority vote of GNN, LSTM, XGBoost algo) ----------
+    # ---------- OVERALL ENSEMBLE ----------
     N = len(y_algo)
     ensemble_preds = []
     for i in range(N):
@@ -502,20 +505,17 @@ def compute_and_save_metrics(dataset, device, gnn_model, lstm_model, xgb_algo, x
     ensemble_prec = float(precision_score(ensemble_true, ensemble_preds, average="macro", zero_division=0))
     ensemble_fpr_overall = float(1.0 - ensemble_acc)
 
-    # ---------- OC-SVM false positive / false negative + metrics ----------
+    # ---------- OC-SVM ----------
     oc_pred = ocsvm.predict(tabular)  # +1 normal, -1 outlier
     num_algos = len(ALGO_ID_TO_NAME)
-    # standard (inlier) vs nonstandard (outlier)
     standard_mask = y_algo < (num_algos // 2)
     nonstandard_mask = ~standard_mask
 
-    # FP: standard samples wrongly flagged as outliers
     fp = int(np.sum((standard_mask) & (oc_pred == -1)))
     tp_normal = int(np.sum((standard_mask) & (oc_pred == 1)))
     n_standard = int(np.sum(standard_mask))
     fp_rate = float(fp / n_standard) if n_standard > 0 else 0.0
 
-    # FN: non-standard samples wrongly treated as normal
     fn = int(np.sum((nonstandard_mask) & (oc_pred == 1)))
     tp_outlier = int(np.sum((nonstandard_mask) & (oc_pred == -1)))
     n_nonstandard = int(np.sum(nonstandard_mask))
@@ -523,7 +523,6 @@ def compute_and_save_metrics(dataset, device, gnn_model, lstm_model, xgb_algo, x
 
     total = n_standard + n_nonstandard
     oc_acc = float((tp_normal + tp_outlier) / total) if total > 0 else 0.0
-    # treat "proprietary" (outlier) as positive class
     prec_denom = tp_outlier + fp
     rec_denom = tp_outlier + fn
     oc_prec = float(tp_outlier / prec_denom) if prec_denom > 0 else 0.0
@@ -998,16 +997,169 @@ def predict_for_binary(bin_path: str):
 
 
 # =========================================================
-# 7. MAIN ENTRY
+# 7. WEB APP (SINGLE WEBSITE)
 # =========================================================
 
-def main():
-    if len(sys.argv) != 2:
-        print(f"Usage: python {os.path.basename(__file__)} <binary_file>")
-        sys.exit(1)
+app = Flask(__name__)
 
-    bin_path = sys.argv[1]
+HTML_PAGE = """
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Crypto Binary Analyzer</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background:#020617; color:#e5e7eb; margin:0; }
+    header { padding:1rem 1.5rem; background:#020617; border-bottom:1px solid #1f2937; }
+    h1 { margin:0; font-size:1.3rem; }
+    main { max-width:1100px; margin:1.5rem auto; padding:0 1.5rem; }
+    .card { background:#020617; border-radius:1rem; border:1px solid #1f2937; padding:1rem 1.25rem; margin-bottom:1rem;}
+    label { font-size:0.9rem; }
+    input[type=file]{ margin-top:0.4rem; color:#e5e7eb;}
+    button { margin-top:0.7rem; padding:0.5rem 1.2rem; border-radius:999px; border:none;
+             background:linear-gradient(135deg,#38bdf8,#6366f1); color:#020617; cursor:pointer; font-weight:500;}
+    .error { color:#fca5a5; font-size:0.85rem; margin-top:0.4rem;}
+    dl { display:grid; grid-template-columns:auto 1fr; column-gap:0.7rem; row-gap:0.2rem; font-size:0.85rem;}
+    dt { text-align:right; color:#9ca3af; }
+    dd { margin:0; }
+    .section-title{ font-size:0.95rem; font-weight:600; margin-top:0.6rem; margin-bottom:0.3rem;}
+    .mono{ font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+    .pill{ display:inline-block; padding:0.15rem 0.6rem; border-radius:999px; font-size:0.8rem; border:1px solid #1f2937; margin-right:0.3rem; margin-top:0.2rem;}
+    .pill.good{ border-color:#22c55e55; color:#4ade80;}
+    .pill.bad{ border-color:#ef444455; color:#fca5a5;}
+    .pill.neutral{ border-color:#64748b66; color:#9ca3af;}
+    .small{ font-size:0.83rem; color:#9ca3af;}
+    .hash{ font-size:0.76rem; color:#64748b;}
+    .block{ border-top:1px solid #0b1120; padding-top:0.4rem; margin-top:0.4rem;}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Crypto Binary Analyzer – Web UI</h1>
+</header>
+<main>
 
+  <div class="card">
+    <h2>Upload binary</h2>
+    <form method="post" enctype="multipart/form-data">
+      <label for="file">Select firmware / binary file:</label><br>
+      <input type="file" name="file" id="file" required><br>
+      <button type="submit">Analyze</button>
+    </form>
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% endif %}
+    <p class="small">The file is processed once, features are extracted, models run, and the result is logged into a local blockchain JSON ledger.</p>
+  </div>
+
+  {% if prediction %}
+  <div class="card">
+    <h2>Prediction summary</h2>
+    <p>
+      File: <span class="mono">{{ prediction.file }}</span><br>
+    </p>
+    <div>
+      <span class="pill neutral">Algorithm: {{ prediction.algo_name }} (id={{ prediction.algo_id }})</span>
+      <span class="pill neutral">Architecture: {{ prediction.arch_name }}</span>
+      <span class="pill neutral">Protocol: {{ prediction.protocol_name }}</span>
+      {% if prediction.ocsvm_is_proprietary %}
+        <span class="pill bad">Proprietary (OC-SVM outlier)</span>
+      {% else %}
+        <span class="pill good">Standard-like</span>
+      {% endif %}
+    </div>
+
+    <div class="section-title">Model votes (algorithm id)</div>
+    <dl>
+      <dt>GNN</dt><dd>{{ prediction.gnn_pred_algo_id }}</dd>
+      <dt>LSTM</dt><dd>{{ prediction.lstm_pred_algo_id }}</dd>
+      <dt>XGBoost (algo)</dt><dd>{{ prediction.xgb_algo_pred_algo_id }}</dd>
+    </dl>
+
+    <div class="section-title">Input features</div>
+    <dl>
+      <dt>Length</dt><dd>{{ prediction.input_features.length }}</dd>
+      <dt>Unique bytes</dt><dd>{{ prediction.input_features.unique_bytes }}</dd>
+      <dt>Entropy</dt><dd>{{ "%.4f"|format(prediction.input_features.entropy) }}</dd>
+      <dt>Mean byte</dt><dd>{{ "%.4f"|format(prediction.input_features.mean_byte) }}</dd>
+      <dt>Std byte</dt><dd>{{ "%.4f"|format(prediction.input_features.std_byte) }}</dd>
+    </dl>
+
+    <div class="section-title">Typical features for this algorithm</div>
+    {% if prediction.algo_mean_features %}
+      <dl>
+        <dt>Length</dt><dd>{{ "%.4f"|format(prediction.algo_mean_features[0]) }}</dd>
+        <dt>Unique bytes</dt><dd>{{ "%.4f"|format(prediction.algo_mean_features[1]) }}</dd>
+        <dt>Entropy</dt><dd>{{ "%.4f"|format(prediction.algo_mean_features[2]) }}</dd>
+        <dt>Mean byte</dt><dd>{{ "%.4f"|format(prediction.algo_mean_features[3]) }}</dd>
+        <dt>Std byte</dt><dd>{{ "%.4f"|format(prediction.algo_mean_features[4]) }}</dd>
+      </dl>
+    {% else %}
+      <p class="small">No stats available for this algorithm.</p>
+    {% endif %}
+
+    <div class="section-title">Protocol sequence</div>
+    <div class="small">
+      {% for idx, step in enumerate(prediction.protocol_sequence) %}
+        <div>
+          <span class="mono">{{ step }}</span>
+          {% if prediction.protocol_step_explanations and idx < prediction.protocol_step_explanations|length %}
+             – {{ prediction.protocol_step_explanations[idx].description }}
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="section-title">Reasoning</div>
+    <div class="small">
+      <strong>Algorithm:</strong> {{ prediction.explanations.algo_reason }}<br><br>
+      <strong>Architecture:</strong> {{ prediction.explanations.arch_reason }}<br><br>
+      <strong>Protocol:</strong> {{ prediction.explanations.proto_reason }}<br><br>
+      <strong>Proprietary / OC-SVM:</strong> {{ prediction.explanations.prop_reason }}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if metrics and metrics.overall_ensemble %}
+  <div class="card">
+    <h2>Overall ensemble metrics (synthetic dataset)</h2>
+    <dl>
+      <dt>Accuracy</dt><dd>{{ "%.4f"|format(metrics.overall_ensemble.accuracy) }}</dd>
+      <dt>Macro recall</dt><dd>{{ "%.4f"|format(metrics.overall_ensemble.macro_recall) }}</dd>
+      <dt>Macro precision</dt><dd>{{ "%.4f"|format(metrics.overall_ensemble.macro_precision) }}</dd>
+      <dt>False positive rate</dt><dd>{{ "%.4f"|format(metrics.overall_ensemble.false_positive_rate_overall) }}</dd>
+    </dl>
+  </div>
+  {% endif %}
+
+  {% if blockchain and blockchain.last_blocks %}
+  <div class="card">
+    <h2>Blockchain log (last {{ blockchain.last_blocks|length }} blocks)</h2>
+    {% for b in blockchain.last_blocks %}
+      <div class="block">
+        <div>#{{ b.index }} – {{ b.timestamp }}</div>
+        {% if b.data and b.data.file %}
+          <div class="small">
+            File <span class="mono">{{ b.data.file }}</span>,
+            Algo {{ b.data.algo_name }} (id={{ b.data.algo_id }}),
+            Arch {{ b.data.arch_name }},
+            Proto {{ b.data.protocol_name }},
+            {% if b.data.is_proprietary %}Proprietary{% else %}Standard-like{% endif %}
+          </div>
+        {% endif %}
+        <div class="hash">hash={{ b.hash[:16] }}… prev={{ b.previous_hash[:12] }}…</div>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</main>
+</body>
+</html>
+"""
+
+def ensure_models_trained():
+    """Check for model files; train if missing."""
     needed = [
         "gnn_model.pth",
         "lstm_opcode_model.pth",
@@ -1016,6 +1168,7 @@ def main():
         "xgb_proto_model.json",
         "ocsvm_model.pkl",
         "algo_feature_means.json",
+        MODEL_METRICS_JSON,
     ]
     if not all(os.path.exists(f) for f in needed):
         print("[*] Some model files are missing. Training all models now...")
@@ -1023,173 +1176,64 @@ def main():
     else:
         print("[+] All model files found. Skipping training.")
 
-    metrics = load_model_metrics()
 
-    # ---------- Prediction ----------
-    res = predict_for_binary(bin_path)
+@app.route("/", methods=["GET", "POST"])
+def index():
+    prediction = None
+    blockchain_info = None
+    error = None
 
-    print("\n==================== FINAL PREDICTION ====================")
-    print(f"File               : {res['file']}")
-    print(f"Algorithm          : {res['algo_name']} (id={res['algo_id']})")
-    print(f"Architecture       : {res['arch_name']}")
-    print(f"Protocol           : {res['protocol_name']}")
-    print(f"Proprietary?       : {'YES (OC-SVM outlier)' if res['ocsvm_is_proprietary'] else 'NO (standard-like)'}")
+    # always try to load metrics (may be None)
+    metrics = load_model_metrics() or {}
 
-    print("\nProtocol sequence (from dataset):")
-    for step in res["protocol_sequence"]:
-        print(f"  - {step}")
+    if request.method == "POST":
+        uploaded = request.files.get("file")
+        if not uploaded or uploaded.filename == "":
+            error = "Please choose a binary file."
+        else:
+            # save temporary file
+            fd, tmp_path = tempfile.mkstemp()
+            os.close(fd)
+            try:
+                uploaded.save(tmp_path)
+                ensure_models_trained()
+                prediction = predict_for_binary(tmp_path)
 
-    print("\nProtocol sequence explanation:")
-    for item in res["protocol_step_explanations"]:
-        print(f"  {item['step']}: {item['description']}")
+                # update blockchain
+                chain = Blockchain()
+                block_data = {
+                    "file": prediction["file"],
+                    "algo_id": prediction["algo_id"],
+                    "algo_name": prediction["algo_name"],
+                    "arch_name": prediction["arch_name"],
+                    "protocol_name": prediction["protocol_name"],
+                    "is_proprietary": prediction["ocsvm_is_proprietary"],
+                    "features": prediction["input_features"],
+                    "overall_metrics": metrics.get("overall_ensemble") if isinstance(metrics, dict) else None,
+                }
+                new_block = chain.add_block(block_data)
+                last_blocks = chain.chain[-5:]
+                blockchain_info = {
+                    "new_block": new_block,
+                    "last_blocks": last_blocks,
+                }
+            except Exception as e:
+                error = f"Error during analysis: {e}"
+            finally:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
 
-    print("\nModel votes (algorithm id):")
-    print(f"  GNN               : {res['gnn_pred_algo_id']}")
-    print(f"  LSTM              : {res['lstm_pred_algo_id']}")
-    print(f"  XGBoost (algo)    : {res['xgb_algo_pred_algo_id']}")
-
-    print("\nInput features (computed from this binary):")
-    for k, v in res["input_features"].items():
-        print(f"  {k:12s}: {v}")
-
-    print("\nTypical features for this algorithm (mean over training dataset):")
-    if res["algo_mean_features"] is not None:
-        feat_names = ["length", "unique_bytes", "entropy", "mean_byte", "std_byte"]
-        for name, val in zip(feat_names, res["algo_mean_features"]):
-            print(f"  {name:12s}: {val}")
-    else:
-        print("  <no stats available>")
-
-    print("\n==================== EXPLANATION OF PREDICTIONS ====================")
-    print("Algorithm reasoning:")
-    print(" ", res["explanations"]["algo_reason"])
-    print("\nArchitecture reasoning:")
-    print(" ", res["explanations"]["arch_reason"])
-    print("\nProtocol reasoning:")
-    print(" ", res["explanations"]["proto_reason"])
-    print("\nProprietary / OC-SVM reasoning:")
-    print(" ", res["explanations"]["prop_reason"])
-    print("==========================================================")
-
-    # ---------- MODEL METRICS VIEW ----------
-    if metrics is not None:
-        print("\n==================== MODEL METRICS (SYNTHETIC DATASET) ====================")
-
-        def fmt(v):
-            return f"{v:.4f}"
-
-        if "overall_ensemble" in metrics:
-            m = metrics["overall_ensemble"]
-            print("OVERALL ENSEMBLE (GNN + LSTM + XGBoost):")
-            print(f"  Accuracy              : {fmt(m['accuracy'])}")
-            print(f"  Macro Recall          : {fmt(m['macro_recall'])}")
-            print(f"  Macro Precision       : {fmt(m['macro_precision'])}")
-            print(f"  False Positive Rate   : {fmt(m['false_positive_rate_overall'])}")
-
-        if "gnn_algo" in metrics:
-            m = metrics["gnn_algo"]
-            print("\nGNN (algorithm classifier):")
-            print(f"  Accuracy              : {fmt(m['accuracy'])}")
-            print(f"  Macro Recall          : {fmt(m['macro_recall'])}")
-            print(f"  Macro Precision       : {fmt(m['macro_precision'])}")
-            print(f"  False Positive Rate   : {fmt(m['false_positive_rate_overall'])}")
-
-        if "lstm_algo" in metrics:
-            m = metrics["lstm_algo"]
-            print("\nLSTM (opcode + features, algorithm):")
-            print(f"  Accuracy              : {fmt(m['accuracy'])}")
-            print(f"  Macro Recall          : {fmt(m['macro_recall'])}")
-            print(f"  Macro Precision       : {fmt(m['macro_precision'])}")
-            print(f"  False Positive Rate   : {fmt(m['false_positive_rate_overall'])}")
-
-        if "xgb_algo" in metrics:
-            m = metrics["xgb_algo"]
-            print("\nXGBoost (algorithm classifier):")
-            print(f"  Accuracy              : {fmt(m['accuracy'])}")
-            print(f"  Macro Recall          : {fmt(m['macro_recall'])}")
-            print(f"  Macro Precision       : {fmt(m['macro_precision'])}")
-            print(f"  False Positive Rate   : {fmt(m['false_positive_rate_overall'])}")
-
-        if "xgb_arch" in metrics:
-            m = metrics["xgb_arch"]
-            print("\nXGBoost (architecture classifier):")
-            print(f"  Accuracy              : {fmt(m['accuracy'])}")
-            print(f"  Macro Recall          : {fmt(m['macro_recall'])}")
-            print(f"  Macro Precision       : {fmt(m['macro_precision'])}")
-            print(f"  False Positive Rate   : {fmt(m['false_positive_rate_overall'])}")
-
-        if "xgb_proto" in metrics:
-            m = metrics["xgb_proto"]
-            print("\nXGBoost (protocol classifier):")
-            print(f"  Accuracy              : {fmt(m['accuracy'])}")
-            print(f"  Macro Recall          : {fmt(m['macro_recall'])}")
-            print(f"  Macro Precision       : {fmt(m['macro_precision'])}")
-            print(f"  False Positive Rate   : {fmt(m['false_positive_rate_overall'])}")
-
-        if "ocsvm" in metrics:
-            oc = metrics["ocsvm"]
-            print("\nOC-SVM (proprietary detector):")
-            print(f"  Accuracy              : {fmt(oc['accuracy'])}")
-            print(f"  Precision (proprietary): {fmt(oc['precision'])}")
-            print(f"  Recall (proprietary)   : {fmt(oc['recall'])}")
-            print(f"  False Positive Rate    : {fmt(oc['false_positive_rate'])}")
-            print(f"  False Negative Rate    : {fmt(oc['false_negative_rate'])}")
-            print(f"  Standard samples       : {oc['n_standard']}")
-            print(f"  Non-standard samples   : {oc['n_nonstandard']}")
-    else:
-        print("\n[!] Model metrics file not found. Run training once to generate metrics.")
-
-    # ---------- BLOCKCHAIN VIEW ----------
-    chain = Blockchain()
-
-    block_data = {
-        "file": res["file"],
-        "algo_id": res["algo_id"],
-        "algo_name": res["algo_name"],
-        "arch_name": res["arch_name"],
-        "protocol_name": res["protocol_name"],
-        "is_proprietary": res["ocsvm_is_proprietary"],
-        "features": res["input_features"],
-        # snapshot of overall metrics at prediction time
-        "overall_metrics": metrics.get("overall_ensemble") if metrics else None,
-    }
-
-    new_block = chain.add_block(block_data)
-
-    print("\n==================== BLOCKCHAIN VIEW ====================")
-    print("New block added:")
-    print(f"  Index        : {new_block.index}")
-    print(f"  Timestamp    : {new_block.timestamp}")
-    print(f"  File         : {new_block.data.get('file')}")
-    print(f"  Algorithm    : {new_block.data.get('algo_name')} (id={new_block.data.get('algo_id')})")
-    print(f"  Architecture : {new_block.data.get('arch_name')}")
-    print(f"  Protocol     : {new_block.data.get('protocol_name')}")
-    print(f"  Proprietary? : {'YES' if new_block.data.get('is_proprietary') else 'NO'}")
-    overall = new_block.data.get("overall_metrics")
-    if overall:
-        print("  Model snapshot metrics:")
-        print(f"    Acc        : {overall['accuracy']:.4f}")
-        print(f"    Recall     : {overall['macro_recall']:.4f}")
-        print(f"    Precision  : {overall['macro_precision']:.4f}")
-        print(f"    FP Rate    : {overall['false_positive_rate_overall']:.4f}")
-    print(f"  Prev. hash   : {new_block.previous_hash}")
-    print(f"  Block hash   : {new_block.hash}")
-
-    print("\nLast blocks in the chain:")
-    print(f"{'Idx':>3}  {'Time':<24} {'File':<20} {'Algo':<15} {'Prop?':>6} {'Hash':>12}")
-    print("-" * 90)
-    for b in chain.chain[-5:]:
-        d = b.data
-        fname = str(d.get("file", ""))[:18] if isinstance(d, dict) else ""
-        algo = str(d.get("algo_name", ""))[:13] if isinstance(d, dict) else ""
-        prop = d.get("is_proprietary") if isinstance(d, dict) else None
-        prop_str = "YES" if prop else "NO"
-        print(
-            f"{b.index:>3}  {b.timestamp:<24} {fname:<20} {algo:<15} "
-            f"{prop_str:>6} {b.hash[:12]:>12}"
-        )
-    print("==========================================================\n")
+    return render_template_string(
+        HTML_PAGE,
+        prediction=prediction,
+        metrics=metrics,
+        blockchain=blockchain_info,
+        error=error,
+        enumerate=enumerate,  # for Jinja loop
+    )
 
 
 if __name__ == "__main__":
-    main()
+    # Make sure models exist before serving web
+    ensure_models_trained()
+    app.run(host="0.0.0.0", port=5000, debug=True)
